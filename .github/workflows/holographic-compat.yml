@@ -1,0 +1,39 @@
+name: Holographic plugin compatibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "public/holo_bridge.py"
+      - "scripts/check_holographic_contract.py"
+      - ".github/workflows/holographic-compat.yml"
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "19 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Verify plugin SQLite schema contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Memory UI
+        uses: actions/checkout@v4
+        with:
+          path: memory-ui
+      - name: Check out holographic plugin
+        uses: actions/checkout@v4
+        with:
+          repository: nastechtest/nastech-plugin-holographic
+          ref: main
+          path: holographic-plugin
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test bridge against plugin schema
+        run: python memory-ui/scripts/check_holographic_contract.py --plugin-store holographic-plugin/store.py

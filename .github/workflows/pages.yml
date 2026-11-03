@@ -1,0 +1,83 @@
+name: Publish production and demo to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build production and demo sites
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build production site
+        env:
+          PAGES_BASE_PATH: /Memory-UI/
+          VITE_HUD_MODE: production
+        run: |
+          bun run build:pages
+          mkdir -p _site
+          cp -a dist/. _site/
+          test -s _site/index.html
+          grep -q '/Memory-UI/assets/' _site/index.html
+
+      - name: Build sample-only demo
+        env:
+          PAGES_BASE_PATH: /Memory-UI/demo/
+          VITE_HUD_MODE: demo
+        run: |
+          bun run build:pages
+          mkdir -p _site/demo
+          cp -a dist/. _site/demo/
+          test -s _site/demo/index.html
+          grep -q '/Memory-UI/demo/assets/' _site/demo/index.html
+          grep -R -q 'NO LOCAL ACCESS' _site/demo/assets
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy GitHub Pages
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

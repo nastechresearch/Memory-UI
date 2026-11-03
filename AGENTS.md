@@ -1,13 +1,10 @@
-<!-- LOVABLE:BEGIN -->
 > [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
+> This project is maintained by Nastech Research. Never rewrite published
+> history on `main`; use normal commits so deployments and collaborators keep
+> a consistent record.
 >
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
-<!-- LOVABLE:END -->
+> Changes pushed to `main` publish to the production GitHub Pages site. Keep
+> both the production and demo builds green.
 
 - HUD canvases read the mutable `hudSettings` object every frame so settings apply live without re-mounting.
 - Real memory data comes from `public/holo_bridge.py` (read-only local HTTP bridge over the plugin SQLite db), because the holographic plugin is local-only with no network API.

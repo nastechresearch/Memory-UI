@@ -13,6 +13,7 @@ import { RegionCards } from "./RegionCards";
 const fmt = (n: number) => n.toLocaleString("en-US");
 const COLORS = ["text-chart-1", "text-chart-2", "text-chart-3", "text-chart-4", "text-chart-5"];
 const BGS = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
+const BUILD_MODE = import.meta.env.VITE_HUD_MODE === "demo" ? "demo" : "production";
 
 function Panel({ title, children, className = "", id }: { title: string; children: ReactNode; className?: string; id?: string }) {
   return (
@@ -93,15 +94,22 @@ export function MemoryHud() {
   const [minTrust, setMinTrust] = useState(0);
   const [sel, setSel] = useState<number | null>(null);
   const [bridgeUrl, setBridgeUrl] = useState("");
-  const [draftUrl, setDraftUrl] = useState("http://localhost:8765");
-  const bridge = useBridge(bridgeUrl);
-  const live = bridge.status === "live";
-  const demo = !live && Boolean(set.demoData);
-  const b = live ? bridge.data : demo ? DEMO_STATS : bridge.data;
+  const [draftUrl, setDraftUrl] = useState("http://127.0.0.1:8765");
+  const bridge = useBridge(BUILD_MODE === "demo" ? "" : bridgeUrl);
+  const live = BUILD_MODE === "production" && bridge.status === "live";
+  const demo = BUILD_MODE === "demo" || (!live && Boolean(set.demoData));
+  const b = BUILD_MODE === "demo" ? DEMO_STATS : live ? bridge.data : demo ? DEMO_STATS : bridge.data;
   useEffect(() => { startPerf(); }, []);
+  useEffect(() => {
+    if (BUILD_MODE !== "production") return;
+    try {
+      const saved = localStorage.getItem("nastech-hud-bridge-url");
+      if (saved) { setBridgeUrl(saved); setDraftUrl(saved); }
+    } catch { /* local storage may be disabled */ }
+  }, []);
   const stColor = { live: "text-chart-2", reconnecting: "text-chart-4", connecting: "text-chart-4", offline: "text-destructive", off: "text-muted-foreground" }[bridge.status];
   const stLabel = { live: "CONNECTED", reconnecting: "RECONNECTING…", connecting: "CONNECTING…", offline: "OFFLINE", off: "NOT CONNECTED" }[bridge.status];
-  const linkLabel = live ? "LIVE" : bridge.status === "reconnecting" ? "RECONNECTING" : demo ? "DEMO" : "SIMULATED";
+  const linkLabel = BUILD_MODE === "demo" ? "DEMO BUILD" : live ? "LIVE MEMORY" : bridge.status === "reconnecting" ? "RECONNECTING" : demo ? "SAMPLE DATA" : "SIMULATED";
   const diving = Number(hudSettings.diving);
   const cell = b && b.recent.length ? b.recent[Number(hudSettings.diveCount) % b.recent.length] : null;
   const region = set.region;
@@ -213,17 +221,24 @@ export function MemoryHud() {
             </div>
           </details>
           <div className="space-y-1 border-t border-border pt-2">
-            <p className="hud-title text-[11px]">Holographic Plugin Link</p>
-            <p className="text-[10px] text-muted-foreground">Run <span className="font-mono text-primary">python holo_bridge.py</span> next to your Nastech memory, then connect.</p>
-            <input value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} className="w-full rounded border border-input bg-background px-2 py-1 font-mono text-xs" />
-            <div className="flex gap-1">
-              <button onClick={() => setBridgeUrl(draftUrl)} className="flex-1 rounded bg-primary py-1 text-xs text-primary-foreground">Connect</button>
-              <button onClick={() => setBridgeUrl("")} className="flex-1 rounded border border-border py-1 text-xs">Disconnect</button>
-            </div>
-            <a href="/holo_bridge.py" download className="block text-[10px] text-primary underline">Download holo_bridge.py</a>
-            <p className="font-mono text-[10px]">Status: <span className={stColor}>{stLabel}</span>{demo && <span className="text-chart-4"> · showing demo data</span>}</p>
-            {bridge.lastOk > 0 && <p className="font-mono text-[10px] text-muted-foreground">Last data: {new Date(bridge.lastOk).toLocaleTimeString()}</p>}
-            {bridge.hint && !live && <p className="rounded border border-destructive/40 bg-destructive/10 p-1.5 text-[10px] text-destructive">{bridge.hint}{bridge.retryIn > 0 && ` Retrying in ${Math.max(0, Math.round((bridge.retryIn - Date.now()) / 1000))}s.`}</p>}
+            {BUILD_MODE === "demo" ? (
+              <p className="text-[10px] text-muted-foreground">Demo build uses synthetic sample data only and never connects to a local plugin or memory database.</p>
+            ) : (
+              <div className="space-y-1">
+                <p className="hud-title text-[11px]">Holographic Plugin Link</p>
+                <p className="text-[10px] text-muted-foreground">The browser reads local fact text and entity names when connected. Only connect from a Nastech Research page you trust.</p>
+                <p className="text-[10px] text-muted-foreground">Run <span className="font-mono text-primary">python holo_bridge.py</span> beside your Nastech memory database.</p>
+                <input value={draftUrl} onChange={(e) => setDraftUrl(e.target.value)} className="w-full rounded border border-input bg-background px-2 py-1 font-mono text-xs" />
+                <div className="flex gap-1">
+                  <button onClick={() => { const url = draftUrl.trim(); setBridgeUrl(url); try { localStorage.setItem("nastech-hud-bridge-url", url); } catch { /* local storage may be disabled */ } }} className="flex-1 rounded bg-primary py-1 text-xs text-primary-foreground">Connect</button>
+                  <button onClick={() => { setBridgeUrl(""); try { localStorage.removeItem("nastech-hud-bridge-url"); } catch { /* local storage may be disabled */ } }} className="flex-1 rounded border border-border py-1 text-xs">Disconnect</button>
+                </div>
+                <a href={`${import.meta.env.BASE_URL}holo_bridge.py`} download className="block text-[10px] text-primary underline">Download holo_bridge.py</a>
+                <p className="font-mono text-[10px]">Status: <span className={stColor}>{stLabel}</span>{demo && <span className="text-chart-4"> · showing sample data</span>}</p>
+                {bridge.lastOk > 0 && <p className="font-mono text-[10px] text-muted-foreground">Last data: {new Date(bridge.lastOk).toLocaleTimeString()}</p>}
+                {bridge.hint && !live && <p className="rounded border border-destructive/40 bg-destructive/10 p-1.5 text-[10px] text-destructive">{bridge.hint}{bridge.retryIn > 0 && ` Retrying in ${Math.max(0, Math.round((bridge.retryIn - Date.now()) / 1000))}s.`}</p>}
+              </div>
+            )}
           </div>
           <button onClick={() => upd({ ...DEFAULTS, region: -1, theme: DEFAULT_THEME } as Partial<Settings>)} className="w-full rounded border border-primary py-1 text-xs text-primary">Reset to default</button>
         </aside>
@@ -232,11 +247,13 @@ export function MemoryHud() {
       <header className="hud-panel mb-2 flex flex-wrap items-center justify-between gap-3 px-4 py-2">
         <div>
           <h1 className="hud-title text-lg md:text-2xl">Nastech Neural Memory HUD</h1>
-          <p className="text-[11px] tracking-[0.2em] text-muted-foreground">REAL-TIME THINKING · LEARNING · REASONING · MEMORY</p>
+          <p className="text-[11px] tracking-[0.2em] text-muted-foreground">
+            {BUILD_MODE === "demo" ? "DEMO BUILD · SYNTHETIC SAMPLE DATA · NO LOCAL ACCESS" : "ANIMATED VISUALIZATION · LOCAL MEMORY WHEN CONNECTED"}
+          </p>
         </div>
         <div className="h-10 w-48 md:w-72"><Wave speed={2} /></div>
         <div className="text-xs">
-          <p className="hud-title">Live thinking</p>
+          <p className="hud-title">Simulated activity</p>
           <p className="font-mono text-muted-foreground">
             {["ANALYZE", "REASON", "PLAN", "RESPOND", "LEARN"].map((w, i) => (
               <span key={w} className={i === tick % 5 ? "text-chart-2 glow-text" : ""}>{w}{i < 4 ? " → " : ""}</span>
