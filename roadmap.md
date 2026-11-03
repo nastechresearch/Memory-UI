@@ -1,0 +1,16 @@
+# Roadmap
+- [x] Live animated memory HUD
+- [x] Clickable brain region extraction + brain settings panel
+- [x] Polish desktop + mobile layout
+- [x] Read nastech-plugin-holographic repo and plan how HUD connects to it
+- [x] 3D rotatable brain with zoom into cells + memory cell close-up
+- [x] Bridge connected/reconnecting/offline states, hints, demo mode
+- [x] Speed: auto quality, 4K cap, slowdown reasons
+- [x] 30+ user settings, all from 0, saved; plugin config editor
+- [x] Deliver project ZIP in Files
+- [x] 3D scene: small brain up-left + real wired neuron cells in space
+- [x] Memory explorer (search, filter, detail)
+- [x] Color themes
+- [x] Sound effects with mute
+- [x] Settings polish: region, drawer + scroll persisted
+- [x] Cells inside the brain (real anatomy) + wired region activity cards and log beside the small brain
