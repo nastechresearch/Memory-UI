@@ -22,11 +22,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out Memory UI
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: memory-ui
       - name: Check out holographic plugin
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: nastechtest/nastech-plugin-holographic
           ref: main
